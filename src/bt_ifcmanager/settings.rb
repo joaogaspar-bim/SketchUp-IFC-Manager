@@ -55,11 +55,13 @@
 
 require 'yaml'
 require 'cgi'
+require 'set'
 
 module BimTools
   module IfcManager
     require File.join(PLUGIN_PATH_LIB, 'skc_reader')
     require File.join(PLUGIN_PATH_LIB, 'xsd_classification_reader')
+    require File.join(PLUGIN_PATH_LIB, 'classification_dict_filters')
     module Settings
       extend self
       attr_accessor :visible,
@@ -88,6 +90,11 @@ module BimTools
       # on disk (bundled with the plugin, or in SketchUp's own
       # 'Classifications' support folder), refreshed by #read_classifications
       @classification_files = {}
+
+      # classification_name => { property_set_group_name => enabled(true/false) }
+      # per-group export toggle for "other" classification systems, refreshed
+      # by #read_classification_propertysets
+      @classification_propertysets = {}
 
       @classifications = {}
       @css_bootstrap = File.join(PLUGIN_PATH_CSS, 'bootstrap.min.css')
@@ -216,6 +223,7 @@ module BimTools
       def save
         @options[:load][:ifc_classifications] = @ifc_classifications
         @options[:load][:classifications] = @active_classifications
+        @options[:load][:classification_propertysets] = @classification_propertysets
         @options[:load][:template_materials] = @template_materials
         @options[:properties][:common_psets] = @common_psets
         @options[:export][:hidden] = @export_hidden.value
@@ -434,6 +442,104 @@ module BimTools
         @active_classifications
       end
 
+      # Finds every property-set group name actually used, in the active
+      # model, under a given classification - i.e. the same grouping
+      # EntityDictionaryReader#get_propertysets would export for it (a
+      # top-level sub-dictionary of the classification's own attribute
+      # dictionary, or one nested under an explicit 'PropertySets' wrapper -
+      # excluding the classification's own bookkeeping fields like
+      # Identification/Location/Name).
+      #
+      # @param classification_name [String]
+      # @return [Array<String>]
+      def discover_classification_propertysets(classification_name)
+        model = Sketchup.active_model
+        return [] unless model
+
+        group_names = Set.new
+        model.definitions.each do |definition|
+          next unless definition.get_attribute('AppliedSchemaTypes', classification_name)
+
+          schema_dict = definition.attribute_dictionary(classification_name)
+          next unless schema_dict && schema_dict.attribute_dictionaries
+
+          schema_dict.attribute_dictionaries.each do |attribute_dictionary|
+            case attribute_dictionary.name
+            when 'PropertySets'
+              next unless attribute_dictionary.attribute_dictionaries
+
+              attribute_dictionary.attribute_dictionaries.each { |d| group_names << d.name }
+            when 'Classifications'
+              next
+            else
+              next if CLASSIFICATION_METADATA_ATTRIBUTES.include?(attribute_dictionary.name)
+
+              group_names << attribute_dictionary.name
+            end
+          end
+        end
+        group_names.to_a
+      rescue StandardError => e
+        puts "Unable to discover property-set groups for classification '#{classification_name}': #{e.message}"
+        []
+      end
+
+      # Determines the full set of per-group export toggles to offer for
+      # every currently active "other" classification system: the union of
+      # (a) whatever the user previously toggled on/off in settings.yml, and
+      # (b) every property-set group name actually found, in the active
+      # model, under that classification. A group discovered for the first
+      # time defaults to enabled, matching the same "already there, so
+      # usable immediately" precedent as #read_classifications.
+      def read_classification_propertysets
+        @classification_propertysets = {}
+
+        persisted = @options[:load][:classification_propertysets]
+        persisted = {} unless persisted.is_a? Hash
+
+        @active_classifications.each_pair do |classification_name, active|
+          next unless active
+
+          saved_groups = persisted[classification_name]
+          saved_groups = {} unless saved_groups.is_a? Hash
+
+          discovered = discover_classification_propertysets(classification_name)
+          group_names = (saved_groups.keys + discovered).uniq
+          next if group_names.empty?
+
+          groups = {}
+          group_names.each do |group_name|
+            groups[group_name] = saved_groups.key?(group_name) ? saved_groups[group_name] : true
+          end
+          @classification_propertysets[classification_name] = groups
+        end
+      end
+
+      # @param classification_name [String]
+      # @param group_name [String]
+      # @return [Boolean] true unless the user explicitly disabled this
+      #   property-set group for this classification. Defaults to true for
+      #   any classification/group this settings dialog never configured
+      #   (e.g. the active IFC classification itself, which is out of scope
+      #   for this per-group toggle), so behaviour is unchanged unless the
+      #   user actively unchecks something.
+      def classification_propertyset_enabled?(classification_name, group_name)
+        groups = @classification_propertysets[classification_name]
+        return true unless groups.is_a?(Hash) && groups.key?(group_name)
+
+        groups[group_name]
+      end
+
+      def set_classification_propertyset(classification_name, group_name)
+        @classification_propertysets[classification_name] ||= {}
+        @classification_propertysets[classification_name][group_name] = true
+      end
+
+      def unset_classification_propertyset(classification_name, group_name)
+        @classification_propertysets[classification_name] ||= {}
+        @classification_propertysets[classification_name][group_name] = false
+      end
+
       # Load enabled classification files from settings.yml
       #   Loads both IFC and other classifications
       #   First checks plugin classifications folder then check SketchUp support files
@@ -538,6 +644,7 @@ module BimTools
         # different model (with different classifications already loaded)
         # may well have become active since load_settings last ran.
         read_classifications
+        read_classification_propertysets
 
         @dialog = UI::HtmlDialog.new(
           {
@@ -555,6 +662,7 @@ module BimTools
         @dialog.add_action_callback('save_settings') do |_action_context, s_form_data|
           update_classifications = []
           update_ifc_classifications = []
+          update_classification_propertysets = []
           @template_materials = false
           @common_psets = false
           @export_hidden.value = false
@@ -618,6 +726,8 @@ module BimTools
               update_ifc_classifications << value
             when 'classification'
               update_classifications << value
+            when 'classification_propertyset'
+              update_classification_propertysets << value
             end
           end
           @active_classifications.each_key do |classification_name|
@@ -632,6 +742,23 @@ module BimTools
               set_ifc_classification(ifc_classification)
             else
               unset_ifc_classification(ifc_classification)
+            end
+          end
+          # Only reconcile property-set groups for classifications that were
+          # actually active (and therefore rendered with checkboxes) this
+          # time - an inactive classification's saved group toggles are left
+          # untouched rather than wiped, since the form never offered a way
+          # to change them.
+          @classification_propertysets.each_pair do |classification_name, groups|
+            next unless @active_classifications[classification_name]
+
+            groups.each_key do |group_name|
+              combined = "#{classification_name}::#{group_name}"
+              if update_classification_propertysets.include? combined
+                set_classification_propertyset(classification_name, group_name)
+              else
+                unset_classification_propertyset(classification_name, group_name)
+              end
             end
           end
           save
@@ -685,6 +812,19 @@ module BimTools
                       ''
                     end
           html << "        <div class=\"col-md-12 row\"><label class=\"check-inline\"><input type=\"checkbox\" name=\"classification\" value=\"#{classification_name}\"#{checked}> #{classification_name}</label></div>\n"
+
+          next unless load
+
+          groups = @classification_propertysets[classification_name]
+          next unless groups && !groups.empty?
+
+          html << "        <div class=\"col-md-12\" style=\"margin-left:20px;\" title=\"Choose which property-set groups from '#{classification_name}' are exported to IFC\">\n"
+          groups.each_pair do |group_name, group_load|
+            group_checked = group_load ? ' checked' : ''
+            combined = "#{classification_name}::#{group_name}"
+            html << "          <div class=\"col-md-12 row\"><label class=\"check-inline\"><input type=\"checkbox\" name=\"classification_propertyset\" value=\"#{combined}\"#{group_checked}> #{group_name}</label></div>\n"
+          end
+          html << "        </div>\n"
         end
 
         # Export settings
