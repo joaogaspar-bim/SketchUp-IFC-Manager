@@ -32,7 +32,9 @@ module BimTools
 
   module IfcManager
     # Version and release information.
-    VERSION = '5.5.4'
+    # Fork of BIM-Tools/SketchUp-IFC-Manager by joaogaspar-bim.
+    # Version scheme: <upstream base version>-jgb.<fork build number>
+    VERSION = '5.5.4-jgb.1'
 
     # load plugin only if SketchUp version is PRO
     # raised minimum version to 2017 due to switch to htmldialog
@@ -40,11 +42,12 @@ module BimTools
       PLUGIN_PATH       = File.join(PLUGIN_ROOT_PATH, 'bt_ifcmanager')
       PLUGIN_IMAGE_PATH = File.join(PLUGIN_PATH, 'images')
 
-      IFCMANAGER_EXTENSION = SketchupExtension.new('IFC Manager', File.join(PLUGIN_PATH, 'loader'))
+      IFCMANAGER_EXTENSION = SketchupExtension.new('IFC Manager (fork jgb)', File.join(PLUGIN_PATH, 'loader'))
       IFCMANAGER_EXTENSION.version = VERSION
-      IFCMANAGER_EXTENSION.description = 'IFC data manager and exporter for SketchUp.'
-      IFCMANAGER_EXTENSION.creator = 'BIM-Tools'
-      IFCMANAGER_EXTENSION.copyright = '2017-2024'
+      IFCMANAGER_EXTENSION.description = 'IFC data manager and exporter for SketchUp. ' \
+                                          'Fork of BIM-Tools/SketchUp-IFC-Manager by joaogaspar-bim.'
+      IFCMANAGER_EXTENSION.creator = 'joaogaspar-bim (fork of BIM-Tools)'
+      IFCMANAGER_EXTENSION.copyright = '2017-2024 Jan Brouwer and contributors; modifications 2026 joaogaspar-bim'
       Sketchup.register_extension(IFCMANAGER_EXTENSION, true)
     else
       UI.messagebox 'You need at least SketchUp 2017 to use this extension.'
