@@ -389,17 +389,26 @@ module BimTools
       end
 
       # Determines the full set of "other classification systems" checkboxes
-      # to offer: the union of (a) whatever the user previously toggled
-      # on/off in settings.yml, keyed by classification NAME (not filename -
-      # unlike Settings.ifc_classifications, an "other" classification isn't
-      # guaranteed to be a bundled plugin asset with a stable filename), and
-      # (b) every classification schema currently loaded in the active model.
+      # to offer: every classification schema currently loaded in the ACTIVE
+      # DOCUMENT only - never a name merely remembered from a previous
+      # document's settings.yml toggle. Each SketchUp document can have its
+      # own, user-invented classification system (e.g. "Classificação EBBIM"
+      # in one file, something else entirely in another) - a name toggled
+      # on/off in one document must never leak into, or get force-loaded
+      # into, a different document that never had that classification to
+      # begin with (confirmed bug, 2026-08-16: this leak caused
+      # load_classifications to try loading a stale classification's schema
+      # file into an unrelated document, raising an uncaught exception that
+      # aborted load_settings before it reached load_ifc_skc, leaving
+      # Settings.ifc_module nil and silently breaking every subsequent
+      # export for the rest of the SketchUp session).
       #
-      # A schema newly discovered this way (not yet in settings.yml) defaults
-      # to enabled, so its properties are usable/exportable immediately -
-      # matching what a user who already loaded and started using it in the
-      # model expects, rather than requiring a separate manual opt-in step
-      # for data that's already there.
+      # The persisted settings.yml hash is consulted ONLY to recall the
+      # on/off toggle VALUE for a classification name that IS present in
+      # this document - it never adds a name the document doesn't have.
+      # A schema seen for the first time in this document (not yet in
+      # settings.yml) defaults to enabled, so its properties are
+      # usable/exportable immediately.
       def read_classifications
         @active_classifications = {}
         @classification_files = discover_classification_files
@@ -415,7 +424,7 @@ module BimTools
           normalized[name] = load
         end
 
-        known_names = (persisted.keys + active_model_classification_names).uniq
+        known_names = active_model_classification_names.uniq
         known_names -= @ifc_version_names
 
         known_names.each do |classification_name|
@@ -563,7 +572,18 @@ module BimTools
 
           filepath = @classification_files[classification_name]
           if filepath
-            model.classifications.load_schema(filepath)
+            begin
+              model.classifications.load_schema(filepath)
+            rescue StandardError => e
+              # Never let a single bad/incompatible classification schema
+              # abort the rest of #load_settings (in particular
+              # #load_ifc_skc, further down the call chain) - that previously
+              # left Settings.ifc_module unset for the whole session and
+              # broke every export silently. Surface the failure instead.
+              message = "Unable to load classification '#{classification_name}': #{e.message}"
+              puts message
+              UI::Notification.new(IFCMANAGER_EXTENSION, message).show
+            end
           else
             message = "Unable to load classification:\r\n'#{classification_name}' (no matching .skc/.xsd file found)"
             puts message
