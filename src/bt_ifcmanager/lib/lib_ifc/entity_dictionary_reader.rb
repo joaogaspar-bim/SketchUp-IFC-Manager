@@ -336,7 +336,7 @@ module BimTools
         end
 
         if properties.empty?
-          false
+          nil
         elsif quantities
           IfcElementQuantityBuilder.build(@ifc_model) do |builder|
             builder.set_name(attr_dict.name)
