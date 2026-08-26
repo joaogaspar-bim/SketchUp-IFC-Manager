@@ -822,7 +822,7 @@ module BimTools
         rows = [
           ['RefLatitude', format('%.6f°  (%d° %d\' %d")', preview[:latitude], lat_dms[0].abs, lat_dms[1].abs, lat_dms[2].abs)],
           ['RefLongitude', format('%.6f°  (%d° %d\' %d")', preview[:longitude], long_dms[0].abs, long_dms[1].abs, long_dms[2].abs)],
-          ['RefElevation', format('%.2f m', preview[:elevation])],
+          ['RefElevation', preview[:elevation] ? format('%.2f m', preview[:elevation]) : 'not available'],
           ['Eastings', format('%.2f m', preview[:eastings])],
           ['Northings', format('%.2f m', preview[:northings])],
           ['CRS', preview[:epsg_description]]

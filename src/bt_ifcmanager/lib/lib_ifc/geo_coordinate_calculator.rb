@@ -104,6 +104,28 @@ module BimTools
         [degrees, minutes, seconds, millionths]
       end
 
+      # Sketchup::Model#point_to_latlong ignores the Z coordinate entirely -
+      # confirmed both by the SketchUp API issue tracker ("LatLong and UTM
+      # conversion ignores the Z coordinate", api-issue-tracker#412) and
+      # empirically against a real model here: a model with a verified 750m
+      # geo-location elevation still had point_to_latlong(...).z come out at
+      # ~0. There is no documented API for model elevation; the only way
+      # (also used by this fork before commit ef20990, and confirmed against
+      # that same 750m model) is the undocumented 'ModelTranslationZ' key of
+      # the 'GeoReference' attribute dictionary - the model's SketchUp-native
+      # origin height, in inches, sign-flipped relative to elevation.
+      #
+      # @param geo_reference [Sketchup::AttributeDictionary] su_model.attribute_dictionary('GeoReference')
+      # @return [Float, nil] elevation in meters, nil when the key is absent
+      def elevation_from_geo_reference(geo_reference)
+        return nil unless geo_reference
+
+        raw = geo_reference['ModelTranslationZ']
+        return nil unless raw
+
+        (-raw).to_m
+      end
+
       # Computes every value that ends up in the exported IFC georeference
       # (IfcSite RefLatitude/RefLongitude/RefElevation and IfcMapConversion
       # Eastings/Northings/OrthogonalHeight) from the SketchUp model's
@@ -115,11 +137,14 @@ module BimTools
       def preview(model, use_model_axes)
         return nil unless model
         return nil unless model.georeferenced?
-        return nil unless model.attribute_dictionary('GeoReference')
+
+        geo_reference = model.attribute_dictionary('GeoReference')
+        return nil unless geo_reference
 
         transformation = world_transformation(model, use_model_axes)
 
-        # point_to_latlong returns x=longitude, y=latitude, z=elevation
+        # point_to_latlong returns x=longitude, y=latitude - its z is NOT
+        # elevation, see #elevation_from_geo_reference
         latlong_point = model.point_to_latlong(transformation.origin)
         utm_point = model.point_to_utm(Geom::Point3d.new)
         epsg_name, epsg_description = epsg_for_utm(utm_point)
@@ -128,7 +153,7 @@ module BimTools
         {
           latitude: latlong_point.y,
           longitude: latlong_point.x,
-          elevation: latlong_point.z.m,
+          elevation: elevation_from_geo_reference(geo_reference),
           epsg_name: epsg_name,
           epsg_description: epsg_description,
           eastings: map_conversion[:eastings],

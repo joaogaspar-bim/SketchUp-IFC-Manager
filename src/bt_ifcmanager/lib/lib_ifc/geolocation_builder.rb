@@ -22,6 +22,7 @@
 #
 
 require_relative 'ifc_types'
+require_relative 'geo_coordinate_calculator'
 require_relative 'ifc_map_conversion_builder'
 require_relative 'ifc_projected_crs_builder'
 
@@ -77,12 +78,13 @@ module BimTools
         @geo_reference = su_model.attribute_dictionary('GeoReference')
         return unless @geo_reference
 
-        # LatLong point includes the Z value
-        # point_to_latlong returns x=longitude, y=latitude, z=elevation
+        # point_to_latlong returns x=longitude, y=latitude - its z is NOT
+        # elevation (SketchUp's LatLong/UTM conversion ignores Z), so
+        # elevation is read separately, see GeoCoordinateCalculator#elevation_from_geo_reference
         latlong_point = su_model.point_to_latlong(world_transformation.origin)
         @longitude = latlong_point.x
         @latitude = latlong_point.y
-        @elevation = latlong_point.z.m
+        @elevation = IfcManager::GeoCoordinateCalculator.elevation_from_geo_reference(@geo_reference)
 
         # @TODO: what happens when the 0,0,0 is just over the edge on another UTM tile?
         # utm_point = su_model.point_to_utm(world_transformation.origin)

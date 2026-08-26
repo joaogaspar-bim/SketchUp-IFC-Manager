@@ -34,7 +34,7 @@ module BimTools
     # Version and release information.
     # Fork of BIM-Tools/SketchUp-IFC-Manager by joaogaspar-bim.
     # Version scheme: <upstream base version>-jgb.<fork build number>
-    VERSION = '5.5.4-jgb.3'
+    VERSION = '5.5.4-jgb.4'
 
     # load plugin only if SketchUp version is PRO
     # raised minimum version to 2017 due to switch to htmldialog
