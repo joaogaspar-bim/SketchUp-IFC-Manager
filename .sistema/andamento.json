@@ -1,0 +1,30 @@
+{
+  "formato": "andamento-producao-v1",
+  "projetos": [
+    {
+      "aplicativoId": "8dc54877-ea40-4253-bc5c-0af8fbd2266c",
+      "registros": [
+        {
+          "entidade": "atividade",
+          "chave": "integracao-sistema-andamento-v1",
+          "dados": {
+            "titulo": "Publicar acompanhamento estruturado no SISTEMA",
+            "descricao": "Publicação de .sistema/andamento.json com o identificador desta ficha e instruções de manutenção. Esta atividade se refere à integração documental, não à conclusão das funcionalidades do produto.",
+            "tipo": "documentacao",
+            "status": "concluida",
+            "prioridade": "normal",
+            "etapa_id": "",
+            "responsavel_id": "",
+            "versao_id": "",
+            "inicio": "",
+            "previsao": "",
+            "conclusao": "2026-10-29",
+            "impedimento": "",
+            "resultado": "Arquivo de andamento e contrato de manutenção versionados no repositório. A ponte prepara sugestões para revisão manual; horas, responsáveis, homologação e produção não são inferidos."
+          },
+          "evidencia": ".sistema/andamento.json e .sistema/README.md presentes no commit remoto consultado. A conclusão se limita à publicação desses arquivos de integração documental."
+        }
+      ]
+    }
+  ]
+}
