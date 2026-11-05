@@ -58,3 +58,54 @@ Somente a revisão manual do superadmin pode aplicar as sugestões.
 Um push ou um levantamento entregue não comprovam deploy ou aplicação.
 
 Contrato completo: https://github.com/EscolaBrasileiraDeBIM/sistema/blob/master/docs/automacao/README.md
+
+
+## Esforço de desenvolvimento — integração solicitada em 04/11/2026
+
+A base em `.sistema/esforco-base.json` reproduz os totais e dias do levantamento
+já aprovado no SISTEMA, com corte em 02/11/2026 às 13h05 de São Paulo. Os seis
+destinos sem duração comprovada mantêm horas nulas. Os identificadores e a
+revisão vigente da ficha são respeitados pela ponte; esta base não soma outra
+vez as horas já aprovadas. As fontes detalhadas anteriores permanecem no SISTEMA.
+O repositório recebe apenas os agregados, a referência da aprovação e seu hash,
+sem conversas, caminhos locais ou identificação presumida de Colaborador.
+
+Para disponibilizar horas novas no próximo push, acrescentar os timestamps de
+eventos de trabalho documentados em `.sistema/esforco-eventos.json`, com ID
+estável, aplicativoId, grupo, atribuição e referência relativa à evidência.
+Não preencher eventos com datas de commits, arquivos ou vídeos nem copiar
+conversas. Ausência de eventos novos conserva o retrato anterior.
+
+Executar `node .sistema/atualizar-esforco.cjs` para atualizar somente o registro
+`esforco` de cada destino em `.sistema/andamento.json`, preservando as demais
+atividades e informações. O cálculo usa intervalos entre eventos com lacunas de
+até 5/15/30 minutos, une sobreposições por grupo e dia e conta dias em
+America/Sao_Paulo. Eventos novos começam no corte da base; não reimportar o
+histórico. Períodos compartilhados e contexto ficam fora das horas principais.
+A autoria continua sem identificação enquanto não houver comprovação e vínculo
+a uma Pessoa real no SISTEMA.
+
+O atributo técnico `preservar_fontes_atuais: true` pede à ponte que mantenha os
+dias, fontes e referências de sessões já existentes na ficha e incorpore as
+linhas publicadas. O resultado é uma fotografia cumulativa completa, com a
+revisão atual da ficha, entregue como **Aguardando revisão**. Não aplica mudanças,
+não muda permissões, ramos nem agendamentos. Se o corte da ficha avançar além
+da base remota, conferir a nova aprovação antes de publicar outro retrato.
+
+Formato de um registro de eventos (preencher somente com evidência real):
+
+```json
+{
+  "id": "identificador-estavel-do-registro",
+  "aplicativoId": "UUID-DO-DESTINO-DESTE-REPOSITORIO",
+  "atribuicao": "aplicativo",
+  "grupo": "NOME-EXATO-DO-DESTINO",
+  "instantes": ["TIMESTAMP-REAL-COM-FUSO", "TIMESTAMP-REAL-COM-FUSO"],
+  "referencia": ".sistema/esforco-eventos.json#identificador-estavel-do-registro"
+}
+```
+
+O executor de nuvem consulta o arquivo enviado ao GitHub, sem depender de
+computador ligado ou página aberta e sem API de IA paga. O script local prepara
+dados durante o desenvolvimento; não é um segundo agendamento nem um relógio
+de jornada. Conferência sem novos intervalos não produz horas inventadas.

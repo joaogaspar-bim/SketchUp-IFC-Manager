@@ -23,6 +23,20 @@
             "resultado": "Arquivo de andamento e contrato de manutenção versionados no repositório. A ponte prepara sugestões para revisão manual; horas, responsáveis, homologação e produção não são inferidos."
           },
           "evidencia": ".sistema/andamento.json e .sistema/README.md presentes no commit remoto consultado. A conclusão se limita à publicação desses arquivos de integração documental."
+        },
+        {
+          "entidade": "esforco",
+          "preservar_fontes_atuais": true,
+          "dados": {
+            "corte_em": "2026-11-02T16:05:47.848Z",
+            "dias_locais": null,
+            "primeiro_dia_local": "",
+            "ultimo_dia_local": "",
+            "horas_5": null,
+            "horas_15": null,
+            "horas_30": null
+          },
+          "evidencia": "Base de esforço já aprovada no SISTEMA, identificada por aplicativoId e corte em .sistema/esforco-base.json. Novos intervalos, quando presentes, estão em .sistema/esforco-eventos.json; geração por .sistema/atualizar-esforco.cjs. Fontes detalhadas anteriores permanecem no SISTEMA. Autoria não comprovada permanece sem identificação."
         }
       ]
     }
