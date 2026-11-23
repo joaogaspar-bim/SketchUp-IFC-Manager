@@ -109,3 +109,26 @@ O executor de nuvem consulta o arquivo enviado ao GitHub, sem depender de
 computador ligado ou página aberta e sem API de IA paga. O script local prepara
 dados durante o desenvolvimento; não é um segundo agendamento nem um relógio
 de jornada. Conferência sem novos intervalos não produz horas inventadas.
+
+
+## Registro local de trabalho — atualização de 22/11/2026
+
+Executar `node .sistema/registrar-esforco.cjs` ao iniciar ou retomar e ao
+concluir trabalho, antes de preparar o push. O comando lê somente metadados
+locais necessários de Codex e Claude: instantes, caminhos estruturados e
+vínculos Git verificáveis. Requer Node.js 22.13 ou posterior para ler o SQLite
+do Codex. Não acessa a rede, não aplica fichas e não instala agendamento.
+
+Os IDs dos registros são estáveis e as repetições unem eventos sem duplicá-los.
+O coletor preserva os eventos anteriores e recalcula o retrato cumulativo
+com o gerador já existente. Conversas, saídas de comandos, caminhos locais,
+credenciais e identificação presumida de Pessoa não são publicados.
+Importações duplicadas, subagentes, coordenação de vários projetos e turnos
+com vínculo ambíguo não viram horas exclusivas de um Aplicativo. Um repositório
+com vários destinos exige identificar o destino dos eventos; não há rateio
+automático. Limitações aparecem no resultado local do comando.
+
+Publicar os eventos e o andamento junto das alterações da sessão e conferir
+a entrega na ficha do SISTEMA. A revisão manual do superadmin continua sendo
+a operação que aprova a substituição do levantamento. Se não for possível
+consultar a ficha, informar que a entrega e a aplicação não foram confirmadas.
