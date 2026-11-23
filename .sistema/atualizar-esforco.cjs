@@ -2,7 +2,8 @@
 const fs=require('node:fs'),path=require('node:path');
 const limpar=v=>JSON.parse(JSON.stringify(v));
 function instante(s){if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(s)||!Number.isFinite(Date.parse(s)))throw Error('Informe timestamps reais com fuso.');return Date.parse(s);}
-const dia=ms=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
+const formatadorDia=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+const dia=ms=>formatadorDia.format(new Date(ms));
 function unir(ps){const out=[];for(const [a,b] of ps.filter(([a,b])=>b>a).sort((x,y)=>x[0]-y[0])){const z=out.at(-1);if(z&&a<=z[1])z[1]=Math.max(z[1],b);else out.push([a,b]);}return out;}
 const total=ps=>unir(ps).reduce((s,[a,b])=>s+b-a,0),chave=x=>`${x.atribuicao}:${x.grupo}:${x.dia}`;
 function resumo(dias,horasConhecidas){const locais=dias.filter(x=>x.atribuicao==='aplicativo'),datas=[...new Set(locais.map(x=>x.dia))].sort();return {dias_locais:datas.length||null,primeiro_dia_local:datas[0]??'',ultimo_dia_local:datas.at(-1)??'',...Object.fromEntries([5,15,30].map(k=>['horas_'+k,horasConhecidas?locais.reduce((n,x)=>n+x['ms_'+k],0)/3600000:null]))};}
